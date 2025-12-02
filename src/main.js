@@ -1,5 +1,5 @@
 import { loadAssets } from './assets.js';
-import { initNetwork, gameState, sweepTile, claimTile } from './state.js';
+import { initNetwork, gameState, sweepTile, claimTile, SKINS, buySkin } from './state.js';
 import { render, resize } from './renderer.js';
 import { worldToGrid, TILE_SIZE } from './world.js';
 import nipplejs from 'nipplejs';
@@ -108,9 +108,54 @@ function setupControls() {
             input.keys[e.key.toLowerCase()] = false;
         });
     }
+
+    // Shop UI
+    const shopModal = document.getElementById('shop-modal');
+    const shopList = document.getElementById('shop-list');
+    
+    document.getElementById('btn-open-shop').addEventListener('click', () => {
+        shopModal.classList.remove('hidden');
+        renderShop();
+    });
+
+    document.getElementById('btn-close-shop').addEventListener('click', () => {
+        shopModal.classList.add('hidden');
+    });
+
+    function renderShop() {
+        document.getElementById('shop-balance').innerText = `Points: ${gameState.me.score}`;
+        shopList.innerHTML = '';
+        
+        Object.values(SKINS).forEach(skin => {
+            const el = document.createElement('div');
+            const owned = gameState.me.unlockedSkins.includes(skin.id);
+            const equipped = gameState.me.skin === skin.id;
+            const canAfford = gameState.me.score >= skin.cost;
+            
+            el.className = `shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''} ${(!owned && !canAfford) ? 'locked' : ''}`;
+            
+            let statusText = `${skin.cost} pts`;
+            if (equipped) statusText = "EQUIPPED";
+            else if (owned) statusText = "OWNED";
+            
+            el.innerHTML = `
+                <div style="font-weight:bold">${skin.name}</div>
+                <div>${statusText}</div>
+            `;
+            
+            el.onclick = () => {
+                if (buySkin(skin.id)) {
+                    renderShop();
+                }
+            };
+            
+            shopList.appendChild(el);
+        });
+    }
 }
 
 function performAction(action) {
+    if (document.getElementById('shop-modal').classList.contains('hidden') === false) return; // Shop open
     if (Date.now() < gameState.me.stunnedUntil) return;
 
     // Determine grid tile under player center

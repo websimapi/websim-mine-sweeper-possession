@@ -1,6 +1,6 @@
 import { TILE_SIZE, getTileKey, worldToGrid, getNeighborMineCount } from './world.js';
 import { getImage } from './assets.js';
-import { gameState } from './state.js';
+import { gameState, SKINS } from './state.js';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -94,14 +94,14 @@ export function render() {
     // Draw Other Players
     for (const [id, peer] of Object.entries(gameState.peers)) {
         if (id === gameState.room.clientId) continue; // Skip self (drawn last)
-        drawPlayer(peer.x, peer.y, peer.username, false, peer.stunned);
+        drawPlayer(peer.x, peer.y, peer.username, false, peer.stunned, peer.skin);
     }
 
     // Draw Self
-    drawPlayer(gameState.me.x, gameState.me.y, gameState.me.username, true, Date.now() < gameState.me.stunnedUntil);
+    drawPlayer(gameState.me.x, gameState.me.y, gameState.me.username, true, Date.now() < gameState.me.stunnedUntil, gameState.me.skin);
 }
 
-function drawPlayer(x, y, username, isSelf, isStunned) {
+function drawPlayer(x, y, username, isSelf, isStunned, skinId) {
     const screenX = Math.floor(x - gameState.me.x + width / 2);
     const screenY = Math.floor(y - gameState.me.y + height / 2);
 
@@ -115,7 +115,17 @@ function drawPlayer(x, y, username, isSelf, isStunned) {
     // Draw player sprite
     // Centered
     const pSize = TILE_SIZE;
+    
+    // Apply Skin Filters
+    const skin = SKINS[skinId || 'default'] || SKINS['default'];
+    
+    let filterString = `hue-rotate(${skin.hue}deg)`;
+    if (skin.invert) filterString += ' invert(100%)';
+    if (skin.glow) filterString += ' drop-shadow(0 0 5px gold)';
+    
+    ctx.filter = filterString;
     ctx.drawImage(getImage('player'), -pSize/2, -pSize/2, pSize, pSize);
+    ctx.filter = 'none'; // Reset filter for text
 
     // Name tag
     ctx.fillStyle = isSelf ? '#ffff00' : '#ffffff';
